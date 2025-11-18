@@ -1,51 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>To-Do List App</title>
-	<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Peaceful Tasks | Stay Organized & Mindful</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-	<div class="container">
-		<div class="app">
-			<header class="app-header">
-				<h1>✓ To-Do List</h1>
-				<p class="subtitle">Organize your tasks and boost productivity</p>
-			</header>
+    <div class="background-glow"></div>
+    
+    <div class="container">
+        <div class="app">
+            <header class="app-header">
+                <div class="header-content">
+                    <h1>🌿 My Peaceful Tasks</h1>
+                    <p class="subtitle">Organize your day with calm intention</p>
+                </div>
+            </header>
 
-			<form id="task-form" class="task-form">
-				<input 
-					type="text" 
-					id="task-input" 
-					placeholder="Add a new task..." 
-					autocomplete="off"
-					required
-				>
-				<button type="submit" id="add-btn" class="btn btn-primary">
-					<span>+</span> Add
-				</button>
-			</form>
+            <form id="task-form" class="task-form">
+                <div class="input-wrapper">
+                    <input 
+                        type="text" 
+                        id="task-input" 
+                        placeholder="What would you like to accomplish today?" 
+                        autocomplete="off"
+                        required
+                        maxlength="120"
+                    >
+                    <button type="submit" id="add-btn" class="btn btn-primary">
+                        <span class="btn-icon">+</span>
+                        <span class="btn-text">Add Task</span>
+                    </button>
+                </div>
+                <div class="input-hint">Press Enter to add quickly</div>
+            </form>
 
-			<ul id="task-list" class="task-list"></ul>
+            <div class="tasks-container">
+                <ul id="task-list" class="task-list"></ul>
+                
+                <div id="empty-state" class="empty-state">
+                    <div class="empty-icon">✨</div>
+                    <h3>Your tasks will appear here</h3>
+                    <p>Add your first task to begin your peaceful journey</p>
+                </div>
+            </div>
 
-			<footer class="app-footer">
-				<div class="task-count">
-					<span id="count" class="count-badge">0 tasks</span>
-					<span id="completed-count" class="count-badge completed">0 completed</span>
-				</div>
-				<div class="footer-buttons">
-					<button id="clear-completed" class="btn btn-secondary">Clear Completed</button>
-					<button id="export-btn" class="btn btn-secondary" title="Download tasks as JSON">📥 Export</button>
-				</div>
-			</footer>
+            <footer class="app-footer">
+                <div class="footer-content">
+                    <div class="task-stats">
+                        <div class="stat">
+                            <span class="stat-number" id="total-tasks">0</span>
+                            <span class="stat-label">Total</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number" id="completed-tasks">0</span>
+                            <span class="stat-label">Done</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number" id="pending-tasks">0</span>
+                            <span class="stat-label">To Do</span>
+                        </div>
+                    </div>
+                    
+                    <div class="footer-actions">
+                        <button id="clear-completed" class="btn btn-secondary" title="Clear finished tasks">
+                            <span class="btn-icon">🧹</span>
+                            <span class="btn-text">Clear Done</span>
+                        </button>
+                        <button id="export-btn" class="btn btn-secondary" title="Save your tasks">
+                            <span class="btn-icon">📥</span>
+                            <span class="btn-text">Save Tasks</span>
+                        </button>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
 
-			<div id="empty-state" class="empty-state">
-				<p>🎯 No tasks yet. Add one to get started!</p>
-			</div>
-		</div>
-	</div>
-
-	<script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
