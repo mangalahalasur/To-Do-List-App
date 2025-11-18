@@ -1,208 +1,278 @@
-document.addEventListener('DOMContentLoaded', () => {
-	const taskForm = document.getElementById('task-form');
-	const taskInput = document.getElementById('task-input');
-	const taskList = document.getElementById('task-list');
-	const countEl = document.getElementById('count');
-	const completedCountEl = document.getElementById('completed-count');
-	const clearCompletedBtn = document.getElementById('clear-completed');
-	const exportBtn = document.getElementById('export-btn');
-	const emptyState = document.getElementById('empty-state');
+class PeacefulTodoApp {
+    constructor() {
+        this.tasks = this.loadTasks();
+        this.init();
+    }
 
-	let tasks = [];
-	const STORAGE_KEY = 'todoapp_tasks';
+    init() {
+        this.bindEvents();
+        this.render();
+        this.updateStats();
+    }
 
-	/**
-	 * Load tasks from localStorage
-	 * Stores tasks as JSON array with structure: [{id, text, completed, createdAt}, ...]
-	 */
-	function loadTasks() {
-		const raw = localStorage.getItem(STORAGE_KEY);
-		if (!raw) {
-			tasks = [];
-			return;
-		}
-		try {
-			tasks = JSON.parse(raw) || [];
-		} catch (error) {
-			console.error('Failed to parse tasks from localStorage:', error);
-			tasks = [];
-		}
-	}
+    bindEvents() {
+        // Form submission
+        document.getElementById('task-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.addTask();
+        });
 
-	/**
-	 * Save tasks to localStorage as JSON
-	 */
-	function saveTasks() {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-	}
+        // Clear completed tasks
+        document.getElementById('clear-completed').addEventListener('click', () => {
+            this.clearCompleted();
+        });
 
-	/**
-	 * Update the DOM with current tasks
-	 */
-	function renderTasks() {
-		taskList.innerHTML = '';
+        // Export tasks
+        document.getElementById('export-btn').addEventListener('click', () => {
+            this.exportTasks();
+        });
 
-		if (tasks.length === 0) {
-			emptyState.classList.add('show');
-			taskList.style.display = 'none';
-			return;
-		}
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('task-input').focus();
+            }
+        });
+    }
 
-		emptyState.classList.remove('show');
-		taskList.style.display = 'block';
+    addTask() {
+        const input = document.getElementById('task-input');
+        const text = input.value.trim();
 
-		tasks.forEach(task => {
-			const li = document.createElement('li');
-			li.className = 'task-item';
-			if (task.completed) li.classList.add('completed');
-			li.dataset.id = task.id;
+        if (text === '') {
+            this.showMessage('Please enter a task description', 'warning');
+            return;
+        }
 
-			// Checkbox for marking complete
-			const checkbox = document.createElement('input');
-			checkbox.type = 'checkbox';
-			checkbox.className = 'task-checkbox';
-			checkbox.checked = !!task.completed;
-			checkbox.setAttribute('aria-label', `Mark "${task.text}" as complete`);
-			checkbox.addEventListener('change', () => toggleComplete(task.id));
+        const task = {
+            id: Date.now().toString(),
+            text: text,
+            completed: false,
+            createdAt: new Date().toISOString(),
+            completedAt: null
+        };
 
-			// Task text
-			const span = document.createElement('span');
-			span.className = 'task-text';
-			span.textContent = task.text;
-			span.title = task.text;
+        this.tasks.unshift(task);
+        input.value = '';
+        this.saveTasks();
+        this.render();
+        this.updateStats();
+        
+        this.showMessage('Task added successfully! 🌟', 'success');
+    }
 
-			// Delete button
-			const deleteBtn = document.createElement('button');
-			deleteBtn.className = 'delete-btn';
-			deleteBtn.type = 'button';
-			deleteBtn.textContent = 'Delete';
-			deleteBtn.setAttribute('aria-label', `Delete "${task.text}"`);
-			deleteBtn.addEventListener('click', () => deleteTask(task.id));
+    deleteTask(taskId) {
+        const task = this.tasks.find(t => t.id === taskId);
+        if (task && confirm(`Are you sure you want to delete "${task.text}"?`)) {
+            this.tasks = this.tasks.filter(t => t.id !== taskId);
+            this.saveTasks();
+            this.render();
+            this.updateStats();
+            this.showMessage('Task removed', 'info');
+        }
+    }
 
-			li.appendChild(checkbox);
-			li.appendChild(span);
-			li.appendChild(deleteBtn);
-			taskList.appendChild(li);
-		});
+    toggleComplete(taskId) {
+        const task = this.tasks.find(t => t.id === taskId);
+        if (task) {
+            task.completed = !task.completed;
+            task.completedAt = task.completed ? new Date().toISOString() : null;
+            this.saveTasks();
+            this.render();
+            this.updateStats();
+            
+            const message = task.completed ? 
+                'Great job! Task completed! 🎉' : 
+                'Task marked as pending';
+            this.showMessage(message, 'success');
+        }
+    }
 
-		updateCounts();
-	}
+    clearCompleted() {
+        const completedTasks = this.tasks.filter(task => task.completed);
+        
+        if (completedTasks.length === 0) {
+            this.showMessage('No completed tasks to clear', 'info');
+            return;
+        }
 
-	/**
-	 * Update task counters
-	 */
-	function updateCounts() {
-		const total = tasks.length;
-		const completed = tasks.filter(t => t.completed).length;
+        if (confirm(`Clear ${completedTasks.length} completed task${completedTasks.length > 1 ? 's' : ''}?`)) {
+            this.tasks = this.tasks.filter(task => !task.completed);
+            this.saveTasks();
+            this.render();
+            this.updateStats();
+            this.showMessage('Completed tasks cleared 🧹', 'success');
+        }
+    }
 
-		countEl.textContent = `${total} task${total !== 1 ? 's' : ''}`;
-		completedCountEl.textContent = `${completed} completed`;
-	}
+    exportTasks() {
+        if (this.tasks.length === 0) {
+            this.showMessage('No tasks to export', 'info');
+            return;
+        }
 
-	/**
-	 * Add a new task
-	 * @param {string} text - Task description
-	 */
-	function addTask(text) {
-		const trimmed = text.trim();
-		if (!trimmed) return;
+        const data = {
+            exportedAt: new Date().toISOString(),
+            totalTasks: this.tasks.length,
+            completedTasks: this.tasks.filter(t => t.completed).length,
+            tasks: this.tasks
+        };
 
-		const task = {
-			id: Date.now().toString(),
-			text: trimmed,
-			completed: false,
-			createdAt: new Date().toISOString()
-		};
+        const dataStr = JSON.stringify(data, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `my-peaceful-tasks-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        this.showMessage('Tasks exported successfully! 📥', 'success');
+    }
 
-		tasks.push(task);
-		saveTasks();
-		renderTasks();
-	}
+    render() {
+        const taskList = document.getElementById('task-list');
+        const emptyState = document.getElementById('empty-state');
 
-	/**
-	 * Delete a task by ID
-	 * @param {string} id - Task ID
-	 */
-	function deleteTask(id) {
-		tasks = tasks.filter(t => t.id !== id);
-		saveTasks();
-		renderTasks();
-	}
+        if (this.tasks.length === 0) {
+            taskList.innerHTML = '';
+            emptyState.classList.add('show');
+            return;
+        }
 
-	/**
-	 * Toggle task completion status
-	 * @param {string} id - Task ID
-	 */
-	function toggleComplete(id) {
-		tasks = tasks.map(t =>
-			t.id === id ? { ...t, completed: !t.completed } : t
-		);
-		saveTasks();
-		renderTasks();
-	}
+        emptyState.classList.remove('show');
+        
+        taskList.innerHTML = this.tasks.map(task => `
+            <li class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
+                <div class="task-checkbox ${task.completed ? 'checked' : ''}" 
+                     onclick="peacefulApp.toggleComplete('${task.id}')"
+                     title="${task.completed ? 'Mark as pending' : 'Mark as complete'}">
+                </div>
+                <span class="task-text">${this.escapeHtml(task.text)}</span>
+                <div class="task-actions">
+                    <button class="delete-btn" 
+                            onclick="peacefulApp.deleteTask('${task.id}')"
+                            title="Delete this task">
+                        Remove
+                    </button>
+                </div>
+            </li>
+        `).join('');
+    }
 
-	/**
-	 * Clear all completed tasks
-	 */
-	function clearCompleted() {
-		const initialCount = tasks.length;
-		tasks = tasks.filter(t => !t.completed);
-		if (tasks.length < initialCount) {
-			saveTasks();
-			renderTasks();
-		}
-	}
+    updateStats() {
+        const totalTasks = this.tasks.length;
+        const completedTasks = this.tasks.filter(task => task.completed).length;
+        const pendingTasks = totalTasks - completedTasks;
 
-	/**
-	 * Export tasks as JSON file
-	 */
-	function exportTasksAsJSON() {
-		if (tasks.length === 0) {
-			alert('No tasks to export!');
-			return;
-		}
+        document.getElementById('total-tasks').textContent = totalTasks;
+        document.getElementById('completed-tasks').textContent = completedTasks;
+        document.getElementById('pending-tasks').textContent = pendingTasks;
+    }
 
-		const dataStr = JSON.stringify(tasks, null, 2);
-		const dataBlob = new Blob([dataStr], { type: 'application/json' });
-		const url = URL.createObjectURL(dataBlob);
-		const link = document.createElement('a');
-		link.href = url;
-		link.download = `tasks-${new Date().toISOString().split('T')[0]}.json`;
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
-		URL.revokeObjectURL(url);
-	}
+    saveTasks() {
+        try {
+            localStorage.setItem('peacefulTasks', JSON.stringify(this.tasks));
+        } catch (error) {
+            console.error('Failed to save tasks:', error);
+            this.showMessage('Failed to save tasks to storage', 'error');
+        }
+    }
 
-	// Event listeners
-	taskForm.addEventListener('submit', (e) => {
-		e.preventDefault();
-		addTask(taskInput.value);
-		taskInput.value = '';
-		taskInput.focus();
-	});
+    loadTasks() {
+        try {
+            const saved = localStorage.getItem('peacefulTasks');
+            return saved ? JSON.parse(saved) : [];
+        } catch (error) {
+            console.error('Failed to load tasks:', error);
+            return [];
+        }
+    }
 
-	clearCompletedBtn.addEventListener('click', clearCompleted);
+    showMessage(message, type = 'info') {
+        // Remove existing message
+        const existing = document.querySelector('.message-toast');
+        if (existing) existing.remove();
 
-	exportBtn.addEventListener('click', exportTasksAsJSON);
+        const toast = document.createElement('div');
+        toast.className = `message-toast message-${type}`;
+        toast.textContent = message;
+        
+        // Style the toast
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${this.getMessageColor(type)};
+            color: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            animation: slideInRight 0.3s ease;
+            font-weight: 500;
+            max-width: 300px;
+        `;
 
-	// Keyboard shortcuts
-	document.addEventListener('keydown', (e) => {
-		// Ctrl+K or Cmd+K to focus input
-		if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-			e.preventDefault();
-			taskInput.focus();
-		}
-	});
+        document.body.appendChild(toast);
 
-	// Initial load and render
-	loadTasks();
-	renderTasks();
+        // Auto remove
+        setTimeout(() => {
+            toast.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
 
-	// Optional: Export tasks data for debugging/backup
-	window.exportTasks = () => {
-		const dataStr = JSON.stringify(tasks, null, 2);
-		console.log('Current tasks:', dataStr);
-		return tasks;
-	};
-});
+    getMessageColor(type) {
+        const colors = {
+            success: 'var(--success)',
+            error: 'var(--error)',
+            warning: 'var(--warning)',
+            info: 'var(--primary)'
+        };
+        return colors[type] || colors.info;
+    }
+
+    escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+}
+
+// Add CSS for toast animations
+const toastStyles = document.createElement('style');
+toastStyles.textContent = `
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(toastStyles);
+
+// Initialize the app
+const peacefulApp = new PeacefulTodoApp();
